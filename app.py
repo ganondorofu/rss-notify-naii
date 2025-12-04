@@ -205,21 +205,34 @@ def get_site_info(url):
             'domain': urlparse(url).netloc
         }
 
-def send_discord_message(webhook_url, title, url, site_name=None):
+def send_discord_message(webhook_url, title, url, site_name=None, image_url=None):
     """
-    DiscordのWebhookにシンプルなメッセージを送信
+    DiscordのWebhookにEmbed形式でメッセージを送信
     """
     if not webhook_url:
         print("Webhook URLが設定されていません")
         return False
     
-    # シンプルなメッセージ形式
-    if site_name:
-        content = f"📰 **{site_name}** に新着記事！\n**{title}**\n{url}"
-    else:
-        content = f"📰 新着記事！\n**{title}**\n{url}"
+    # Embed形式
+    embed = {
+        "title": title,
+        "url": url,
+        "color": 0x7c3aed,  # 紫色
+    }
     
-    data = {"content": content}
+    # サイト名があれば作者として表示
+    if site_name:
+        embed["author"] = {
+            "name": f"📰 {site_name}"
+        }
+    
+    # 画像があれば追加
+    if image_url:
+        # httpsまたはhttpで始まるURLのみ
+        if image_url.startswith(('http://', 'https://')):
+            embed["image"] = {"url": image_url}
+    
+    data = {"embeds": [embed]}
     headers = {"Content-Type": "application/json"}
     
     try:
@@ -286,10 +299,13 @@ def check_single_feed(feed_config, webhook_url, seen_guids):
         for entry in feed.entries:
             guid = entry.get("id", entry.get("link", ""))
             if guid and guid not in feed_seen:
+                # 画像URLを抽出
+                image_url = extract_image_from_content(entry)
                 new_entries.append({
                     "title": entry.get("title", "タイトルなし"),
                     "link": entry.get("link", ""),
-                    "guid": guid
+                    "guid": guid,
+                    "image": image_url
                 })
                 feed_seen.add(guid)
         
@@ -297,7 +313,7 @@ def check_single_feed(feed_config, webhook_url, seen_guids):
         new_entries.reverse()
         
         for entry in new_entries:
-            if send_discord_message(webhook_url, entry['title'], entry['link'], feed_name):
+            if send_discord_message(webhook_url, entry['title'], entry['link'], feed_name, entry.get('image')):
                 new_count += 1
                 time.sleep(1)  # レート制限対策
         
@@ -431,11 +447,14 @@ def add_feed():
             webhook_url = config.get("discord_webhook_url", "")
             if webhook_url and all_guids:
                 latest = feed.entries[0]
+                # 画像URLを抽出
+                image_url = extract_image_from_content(latest)
                 send_discord_message(
                     webhook_url,
                     latest.get("title", "タイトルなし"),
                     latest.get("link", ""),
-                    feed_name
+                    feed_name,
+                    image_url
                 )
                 # 通知した記事も既読に追加
                 seen_guids[new_feed["id"]].append(all_guids[0])
@@ -555,11 +574,13 @@ def test_webhook():
     if not webhook_url:
         return jsonify({"status": "error", "message": "Webhook URLが設定されていません"}), 400
     
+    # テスト用のサンプル画像付きで送信
     success = send_discord_message(
         webhook_url,
-        "テスト通知",
-        "https://example.com",
-        "RSS監視システム"
+        "テスト通知 - RSS監視システム",
+        "https://github.com",
+        "RSS監視システム",
+        "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
     )
     
     if success:
