@@ -236,6 +236,25 @@
             border-color: #a78bfa;
         }
         
+        .webhook-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .webhook-configured {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .webhook-not-configured {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
         .feed-url {
             font-size: 0.85rem;
             color: #888;
@@ -512,10 +531,12 @@
             <h2>🔗 Discord設定</h2>
             <div class="form-group">
                 <label>Webhook URL <a href="https://support.discord.com/hc/ja/articles/228383668" target="_blank" style="color: #7c3aed; font-size: 0.8rem;">(作り方)</a></label>
+                <div id="webhook-status" class="webhook-status"></div>
                 <div class="inline-form">
-                    <input type="url" id="webhook-url" placeholder="https://discord.com/api/webhooks/...">
+                    <input type="password" id="webhook-url" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
                     <button class="btn btn-primary" onclick="saveWebhook()">保存</button>
                 </div>
+                <p class="help-text" style="margin-top: 8px;">🔒 セキュリティのため、保存後はURLは表示されません</p>
             </div>
             <div class="form-group">
                 <label>チェック間隔</label>
@@ -584,7 +605,19 @@
             fetch('/api/config')
                 .then(res => res.json())
                 .then(config => {
-                    document.getElementById('webhook-url').value = config.discord_webhook_url || '';
+                    // Webhook URLは表示しない（設定済みかどうかだけ表示）
+                    const statusDiv = document.getElementById('webhook-status');
+                    if (config.webhook_configured) {
+                        statusDiv.className = 'webhook-status webhook-configured';
+                        statusDiv.innerHTML = '✅ Webhook URL 設定済み';
+                    } else {
+                        statusDiv.className = 'webhook-status webhook-not-configured';
+                        statusDiv.innerHTML = '⚠️ Webhook URL が未設定です';
+                    }
+                    document.getElementById('webhook-url').value = '';
+                    document.getElementById('webhook-url').placeholder = config.webhook_configured 
+                        ? '新しいURLを入力して更新...' 
+                        : 'https://discord.com/api/webhooks/...';
                     document.getElementById('check-interval').value = config.check_interval || 300;
                 });
         }
@@ -851,14 +884,28 @@
         }
         
         function saveWebhook() {
-            const url = document.getElementById('webhook-url').value;
+            const url = document.getElementById('webhook-url').value.trim();
+            
+            if (!url) {
+                showToast('Webhook URLを入力してください', 'error');
+                return;
+            }
+            
+            if (!url.startsWith('https://discord.com/api/webhooks/')) {
+                showToast('有効なDiscord Webhook URLを入力してください', 'error');
+                return;
+            }
+            
             fetch('/api/config', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({discord_webhook_url: url})
             })
             .then(res => res.json())
-            .then(() => showToast('Webhook URLを保存しました'))
+            .then(() => {
+                showToast('Webhook URLを保存しました');
+                loadConfig(); // 設定を再読み込み
+            })
             .catch(() => showToast('保存に失敗しました', 'error'));
         }
         
