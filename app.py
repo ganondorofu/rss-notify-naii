@@ -364,9 +364,15 @@ def index():
 
 @app.route("/api/config", methods=["GET"])
 def get_config():
-    """設定を取得"""
+    """設定を取得（Webhook URLはマスク）"""
     config = load_config()
-    return jsonify(config)
+    # Webhook URLは設定済みかどうかだけ返す
+    webhook_url = config.get("discord_webhook_url", "")
+    config_response = {
+        "check_interval": config.get("check_interval", 300),
+        "webhook_configured": bool(webhook_url and len(webhook_url) > 10)
+    }
+    return jsonify(config_response)
 
 @app.route("/api/config", methods=["POST"])
 def update_config():
