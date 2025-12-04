@@ -1,0 +1,14 @@
+[Unit]
+Description=RSS通知システム
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/path/to/rss-notify-naii
+ExecStart=/path/to/rss-notify-naii/venv/bin/python /path/to/rss-notify-naii/app.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

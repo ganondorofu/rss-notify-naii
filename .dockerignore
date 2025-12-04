@@ -1,0 +1,6 @@
+# 自動生成されるファイル
+data/
+*.pyc
+__pycache__/
+venv/
+.env

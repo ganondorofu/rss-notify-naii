@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS通知システム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #7c3aed;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #888;
+            margin-bottom: 15px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .status-running {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-stopped {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .card h2 {
+            color: #a78bfa;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+        
+        input[type="text"],
+        input[type="url"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+        
+        input::placeholder {
+            color: #666;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: #7c3aed;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #6d28d9;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+        
+        .btn-secondary {
+            background: #4b5563;
+            color: white;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #374151;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .feed-list {
+            list-style: none;
+        }
+        
+        .feed-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .feed-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .feed-name {
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .feed-name-text {
+            cursor: pointer;
+        }
+        
+        .feed-name-text:hover {
+            color: #a78bfa;
+        }
+        
+        .btn-edit {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            padding: 2px 5px;
+        }
+        
+        .btn-edit:hover {
+            opacity: 1;
+        }
+        
+        .edit-name-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #7c3aed;
+            border-radius: 4px;
+            color: #e0e0e0;
+            padding: 5px 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .edit-name-input:focus {
+            outline: none;
+            border-color: #a78bfa;
+        }
+        
+        .feed-url {
+            font-size: 0.85rem;
+            color: #888;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .feed-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-left: 15px;
+        }
+        
+        .feed-toggle {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .feed-enabled {
+            background: #10b981;
+            color: white;
+        }
+        
+        .feed-disabled {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast-success {
+            background: #10b981;
+        }
+        
+        .toast-error {
+            background: #ef4444;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .inline-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .inline-form input {
+            flex: 1;
+        }
+        
+        /* サイト追加セクション */
+        .add-site-section {
+            text-align: center;
+        }
+        
+        .add-site-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .add-site-input input {
+            flex: 1;
+        }
+        
+        .help-text {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 10px;
+        }
+        
+        /* フィード選択モーダル */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+        
+        .modal h3 {
+            color: #a78bfa;
+            margin-bottom: 15px;
+        }
+        
+        .modal-close {
+            float: right;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .feed-option {
+            display: block;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .feed-option:hover {
+            border-color: #7c3aed;
+            background: rgba(124, 58, 237, 0.1);
+        }
+        
+        .feed-option-title {
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 5px;
+        }
+        
+        .feed-option-url {
+            font-size: 0.85rem;
+            color: #888;
+            word-break: break-all;
+        }
+        
+        .site-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .site-favicon {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .site-name-input {
+            margin-bottom: 15px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .not-found-message {
+            text-align: center;
+            padding: 20px;
+            color: #f87171;
+        }
+        
+        .manual-add {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+        
+        @media (max-width: 768px) {
+            .add-site-input {
+                flex-direction: column;
+            }
+            
+            .feed-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .feed-actions {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📡 RSS通知システム</h1>
+            <p class="subtitle">好きなサイトの更新をDiscordに通知！</p>
+            <span id="status-badge" class="status-badge status-stopped">停止中</span>
+        </header>
+        
+        <!-- コントロールパネル -->
+        <div class="card">
+            <h2>⚙️ コントロール</h2>
+            <div class="button-group">
+                <button id="btn-start" class="btn btn-success" onclick="startMonitor()">▶ 監視開始</button>
+                <button id="btn-stop" class="btn btn-danger" onclick="stopMonitor()">⏹ 監視停止</button>
+                <button class="btn btn-secondary" onclick="manualCheck()">🔄 今すぐチェック</button>
+                <button class="btn btn-secondary" onclick="testWebhook()">📤 テスト通知</button>
+            </div>
+        </div>
+        
+        <!-- サイト追加（メイン機能） -->
+        <div class="card">
+            <h2>➕ 監視するサイトを追加</h2>
+            <div class="add-site-section">
+                <div class="add-site-input">
+                    <input type="text" id="site-url" placeholder="サイトのURLを入力（例: example.com）">
+                    <button id="btn-detect" class="btn btn-primary" onclick="detectFeed()">
+                        <span id="detect-text">フィードを探す</span>
+                    </button>
+                </div>
+                <p class="help-text">
+                    💡 サイトのURLを入力するだけで、自動的にRSSフィードを探します。<br>
+                    記事ページのURLでも、トップページのURLでもOK！
+                </p>
+            </div>
+        </div>
+        
+        <!-- Discord設定 -->
+        <div class="card">
+            <h2>🔗 Discord設定</h2>
+            <div class="form-group">
+                <label>Webhook URL <a href="https://support.discord.com/hc/ja/articles/228383668" target="_blank" style="color: #7c3aed; font-size: 0.8rem;">(作り方)</a></label>
+                <div class="inline-form">
+                    <input type="url" id="webhook-url" placeholder="https://discord.com/api/webhooks/...">
+                    <button class="btn btn-primary" onclick="saveWebhook()">保存</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>チェック間隔</label>
+                <div class="inline-form">
+                    <input type="number" id="check-interval" min="60" value="300" style="max-width: 120px;">
+                    <span style="color: #888;">秒（5分=300秒）</span>
+                    <button class="btn btn-primary" onclick="saveInterval()">保存</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- フィード一覧 -->
+        <div class="card">
+            <h2>📋 監視中のサイト</h2>
+            <ul id="feed-list" class="feed-list">
+                <li class="empty-state">まだサイトが登録されていません</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- フィード選択モーダル -->
+    <div id="feed-modal" class="modal-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <h3 id="modal-title">フィードを選択</h3>
+            <div id="modal-site-info" class="site-info" style="display: none;">
+                <img id="modal-favicon" class="site-favicon" src="" alt="">
+                <span id="modal-site-name"></span>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast" style="display: none;"></div>
+
+    <script>
+        let currentFeeds = [];
+        let currentSiteInfo = {};
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+            loadFeeds();
+            checkStatus();
+            setInterval(checkStatus, 5000);
+            
+            // Enterキーでフィード検索
+            document.getElementById('site-url').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    detectFeed();
+                }
+            });
+        });
+        
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast toast-' + type;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        function loadConfig() {
+            fetch('/api/config')
+                .then(res => res.json())
+                .then(config => {
+                    document.getElementById('webhook-url').value = config.discord_webhook_url || '';
+                    document.getElementById('check-interval').value = config.check_interval || 300;
+                });
+        }
+        
+        function loadFeeds() {
+            fetch('/api/feeds')
+                .then(res => res.json())
+                .then(feeds => {
+                    const list = document.getElementById('feed-list');
+                    
+                    if (feeds.length === 0) {
+                        list.innerHTML = '<li class="empty-state">まだサイトが登録されていません</li>';
+                        return;
+                    }
+                    
+                    list.innerHTML = feeds.map(feed => `
+                        <li class="feed-item" id="feed-${feed.id}">
+                            <div class="feed-info">
+                                <div class="feed-name" id="feed-name-${feed.id}">
+                                    <span class="feed-name-text" ondblclick="startEditFeedName('${feed.id}')">${escapeHtml(feed.name)}</span>
+                                    <button class="btn-edit" onclick="startEditFeedName('${feed.id}')" title="名前を編集">✏️</button>
+                                </div>
+                                <div class="feed-url">${escapeHtml(feed.url)}</div>
+                            </div>
+                            <div class="feed-actions">
+                                <button class="btn btn-sm feed-toggle ${feed.enabled ? 'feed-enabled' : 'feed-disabled'}" 
+                                        onclick="toggleFeed('${feed.id}')">
+                                    ${feed.enabled ? '有効' : '無効'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteFeed('${feed.id}')">削除</button>
+                            </div>
+                        </li>
+                    `).join('');
+                });
+        }
+        
+        function startEditFeedName(feedId) {
+            const nameDiv = document.getElementById('feed-name-' + feedId);
+            const currentName = nameDiv.querySelector('.feed-name-text').textContent;
+            
+            nameDiv.innerHTML = `
+                <input type="text" class="edit-name-input" id="edit-input-${feedId}" value="${escapeHtml(currentName)}" 
+                       onkeypress="if(event.key==='Enter')saveEditFeedName('${feedId}')"
+                       onblur="saveEditFeedName('${feedId}')">
+            `;
+            
+            const input = document.getElementById('edit-input-' + feedId);
+            input.focus();
+            input.select();
+        }
+        
+        function saveEditFeedName(feedId) {
+            const input = document.getElementById('edit-input-' + feedId);
+            if (!input) return;
+            
+            const newName = input.value.trim();
+            if (!newName) {
+                loadFeeds();
+                return;
+            }
+            
+            fetch('/api/feeds/' + feedId, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: newName})
+            })
+            .then(res => res.json())
+            .then(() => {
+                loadFeeds();
+                showToast('サイト名を更新しました');
+            })
+            .catch(() => {
+                loadFeeds();
+                showToast('更新に失敗しました', 'error');
+            });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function detectFeed() {
+            const urlInput = document.getElementById('site-url');
+            const url = urlInput.value.trim();
+            const btn = document.getElementById('btn-detect');
+            const btnText = document.getElementById('detect-text');
+            
+            if (!url) {
+                showToast('URLを入力してください', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="loading"></span>検索中...';
+            
+            fetch('/api/detect-feed', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: url})
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btnText.textContent = 'フィードを探す';
+                
+                if (data.status === 'success') {
+                    currentFeeds = data.feeds;
+                    currentSiteInfo = data.site_info;
+                    showFeedSelectionModal(data.feeds, data.site_info);
+                } else if (data.status === 'not_found') {
+                    currentSiteInfo = data.site_info;
+                    showNotFoundModal(url, data.site_info);
+                } else {
+                    showToast(data.message || 'エラーが発生しました', 'error');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btnText.textContent = 'フィードを探す';
+                showToast('検索に失敗しました', 'error');
+            });
+        }
+        
+        function showFeedSelectionModal(feeds, siteInfo) {
+            const modal = document.getElementById('feed-modal');
+            const content = document.getElementById('modal-content');
+            const modalTitle = document.getElementById('modal-title');
+            const siteInfoDiv = document.getElementById('modal-site-info');
+            
+            modalTitle.textContent = 'フィードを選択してください';
+            
+            // サイト情報を表示
+            if (siteInfo) {
+                siteInfoDiv.style.display = 'flex';
+                document.getElementById('modal-site-name').textContent = siteInfo.title;
+                if (siteInfo.favicon) {
+                    document.getElementById('modal-favicon').src = siteInfo.favicon;
+                    document.getElementById('modal-favicon').style.display = 'block';
+                } else {
+                    document.getElementById('modal-favicon').style.display = 'none';
+                }
+            }
+            
+            if (feeds.length === 1) {
+                // フィードが1つの場合は直接追加確認
+                content.innerHTML = `
+                    <div class="feed-option" onclick="addFeedFromModal(0)">
+                        <div class="feed-option-title">${escapeHtml(feeds[0].title)}</div>
+                        <div class="feed-option-url">${escapeHtml(feeds[0].url)}</div>
+                    </div>
+                    <div class="site-name-input">
+                        <label>表示名（変更可能）</label>
+                        <input type="text" id="feed-display-name" value="${escapeHtml(feeds[0].title)}" style="width: 100%;">
+                    </div>
+                    <button class="btn btn-success" onclick="addFeedFromModal(0)" style="width: 100%;">このフィードを追加</button>
+                `;
+            } else {
+                // 複数のフィードがある場合
+                content.innerHTML = `
+                    <p style="margin-bottom: 15px; color: #888;">${feeds.length}件のフィードが見つかりました。追加するものを選んでください。</p>
+                    ${feeds.map((feed, i) => `
+                        <div class="feed-option" onclick="selectFeed(${i})">
+                            <div class="feed-option-title">${escapeHtml(feed.title)}</div>
+                            <div class="feed-option-url">${escapeHtml(feed.url)}</div>
+                        </div>
+                    `).join('')}
+                `;
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        function showNotFoundModal(url, siteInfo) {
+            const modal = document.getElementById('feed-modal');
+            const content = document.getElementById('modal-content');
+            const modalTitle = document.getElementById('modal-title');
+            const siteInfoDiv = document.getElementById('modal-site-info');
+            
+            modalTitle.textContent = 'フィードが見つかりませんでした';
+            siteInfoDiv.style.display = 'none';
+            
+            content.innerHTML = `
+                <div class="not-found-message">
+                    <p>😢 このサイトからRSSフィードを見つけられませんでした。</p>
+                    <p style="font-size: 0.85rem; margin-top: 10px;">このサイトはRSSに対応していない可能性があります。</p>
+                </div>
+                <div class="manual-add">
+                    <p style="color: #888; margin-bottom: 10px;">RSSのURLがわかる場合は、直接入力できます：</p>
+                    <div class="form-group">
+                        <label>サイト名</label>
+                        <input type="text" id="manual-name" value="${escapeHtml(siteInfo?.title || '')}" style="width: 100%;">
+                    </div>
+                    <div class="form-group">
+                        <label>RSS URL</label>
+                        <input type="url" id="manual-url" placeholder="https://example.com/feed/" style="width: 100%;">
+                    </div>
+                    <button class="btn btn-primary" onclick="addManualFeed()" style="width: 100%;">追加</button>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+        
+        function selectFeed(index) {
+            const feed = currentFeeds[index];
+            const content = document.getElementById('modal-content');
+            
+            content.innerHTML = `
+                <div class="feed-option" style="border-color: #7c3aed; background: rgba(124, 58, 237, 0.1);">
+                    <div class="feed-option-title">${escapeHtml(feed.title)}</div>
+                    <div class="feed-option-url">${escapeHtml(feed.url)}</div>
+                </div>
+                <div class="site-name-input">
+                    <label>表示名（変更可能）</label>
+                    <input type="text" id="feed-display-name" value="${escapeHtml(feed.title)}" style="width: 100%;">
+                </div>
+                <div class="button-group" style="margin-top: 15px;">
+                    <button class="btn btn-secondary" onclick="showFeedSelectionModal(currentFeeds, currentSiteInfo)">戻る</button>
+                    <button class="btn btn-success" onclick="addFeedFromModal(${index})" style="flex: 1;">追加</button>
+                </div>
+            `;
+        }
+        
+        function addFeedFromModal(index) {
+            const feed = currentFeeds[index];
+            const nameInput = document.getElementById('feed-display-name');
+            const name = nameInput ? nameInput.value.trim() : feed.title;
+            
+            addFeedToList(name, feed.url);
+        }
+        
+        function addManualFeed() {
+            const name = document.getElementById('manual-name').value.trim();
+            const url = document.getElementById('manual-url').value.trim();
+            
+            if (!name || !url) {
+                showToast('サイト名とURLを入力してください', 'error');
+                return;
+            }
+            
+            addFeedToList(name, url);
+        }
+        
+        function addFeedToList(name, url) {
+            fetch('/api/feeds', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, url})
+            })
+            .then(res => res.json())
+            .then(() => {
+                closeModal();
+                document.getElementById('site-url').value = '';
+                loadFeeds();
+                showToast('サイトを追加しました！');
+            })
+            .catch(() => showToast('追加に失敗しました', 'error'));
+        }
+        
+        function closeModal() {
+            document.getElementById('feed-modal').classList.remove('active');
+        }
+        
+        function saveWebhook() {
+            const url = document.getElementById('webhook-url').value;
+            fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({discord_webhook_url: url})
+            })
+            .then(res => res.json())
+            .then(() => showToast('Webhook URLを保存しました'))
+            .catch(() => showToast('保存に失敗しました', 'error'));
+        }
+        
+        function saveInterval() {
+            const interval = document.getElementById('check-interval').value;
+            fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({check_interval: parseInt(interval)})
+            })
+            .then(res => res.json())
+            .then(() => showToast('チェック間隔を保存しました'))
+            .catch(() => showToast('保存に失敗しました', 'error'));
+        }
+        
+        function deleteFeed(id) {
+            if (!confirm('このサイトを削除しますか？')) return;
+            
+            fetch('/api/feeds/' + id, {method: 'DELETE'})
+                .then(res => res.json())
+                .then(() => {
+                    loadFeeds();
+                    showToast('サイトを削除しました');
+                })
+                .catch(() => showToast('削除に失敗しました', 'error'));
+        }
+        
+        function toggleFeed(id) {
+            fetch('/api/feeds/' + id + '/toggle', {method: 'POST'})
+                .then(res => res.json())
+                .then(() => {
+                    loadFeeds();
+                    showToast('ステータスを変更しました');
+                })
+                .catch(() => showToast('変更に失敗しました', 'error'));
+        }
+        
+        function checkStatus() {
+            fetch('/api/monitor/status')
+                .then(res => res.json())
+                .then(data => {
+                    const badge = document.getElementById('status-badge');
+                    const btnStart = document.getElementById('btn-start');
+                    const btnStop = document.getElementById('btn-stop');
+                    
+                    if (data.is_running) {
+                        badge.textContent = '🟢 監視中';
+                        badge.className = 'status-badge status-running';
+                        btnStart.disabled = true;
+                        btnStop.disabled = false;
+                    } else {
+                        badge.textContent = '🔴 停止中';
+                        badge.className = 'status-badge status-stopped';
+                        btnStart.disabled = false;
+                        btnStop.disabled = true;
+                    }
+                });
+        }
+        
+        function startMonitor() {
+            fetch('/api/monitor/start', {method: 'POST'})
+                .then(res => res.json())
+                .then(() => {
+                    checkStatus();
+                    showToast('監視を開始しました！');
+                })
+                .catch(() => showToast('開始に失敗しました', 'error'));
+        }
+        
+        function stopMonitor() {
+            fetch('/api/monitor/stop', {method: 'POST'})
+                .then(res => res.json())
+                .then(() => {
+                    checkStatus();
+                    showToast('監視を停止しました');
+                })
+                .catch(() => showToast('停止に失敗しました', 'error'));
+        }
+        
+        function manualCheck() {
+            showToast('チェック中...');
+            fetch('/api/check', {method: 'POST'})
+                .then(res => res.json())
+                .then(data => showToast(data.message))
+                .catch(() => showToast('チェックに失敗しました', 'error'));
+        }
+        
+        function testWebhook() {
+            fetch('/api/test-webhook', {method: 'POST'})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast(data.message);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                })
+                .catch(() => showToast('テストに失敗しました', 'error'));
+        }
+        
+        // モーダルの外側をクリックで閉じる
+        document.getElementById('feed-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+services:
+  rss-notify:
+    build: .
+    container_name: rss-notify
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # 設定とデータを永続化
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Tokyo
